@@ -30,7 +30,6 @@ function createCard(item, deleteCard) {
 
 function deleteCard(cardTemplateCopy) {
   cardTemplateCopy.remove();
-  console.log(cardTemplateCopy)
 }
 
 function addCard(cardTemplateCopy, placesList) {
