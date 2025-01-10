@@ -19,6 +19,7 @@ const placesList = content.querySelector('.places__list');
 function createCard(item, deleteCard) {
   const cardTemplateCopy = cardTemplate.querySelector('.places__item').cloneNode(true);
   cardTemplateCopy.querySelector('.card__image').src = item.link;
+  cardTemplateCopy.querySelector('.card__image').alt = item.alt;
   cardTemplateCopy.querySelector('.card__title').textContent = item.name;
 
   const cardCopy = cardTemplateCopy.querySelector('.card__delete-button');
