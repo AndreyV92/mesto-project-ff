@@ -8,9 +8,15 @@ export function closePopup(popup) {
   document.removeEventListener('keyup', handleEscKeyUp);
 }
 
-function handleEscKeyUp (evt) {
+function handleEscKeyUp(evt) {
   if (evt.key === "Escape") {
     const isOpenPopup = document.querySelector('.popup_is-opened');
     closePopup(isOpenPopup)
+  }
+}
+
+export function overlayClick(event) {
+  if(event.target.classList.contains('popup')) {
+    closePopup(event.target)
   }
 }
