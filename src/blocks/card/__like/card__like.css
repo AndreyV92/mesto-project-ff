@@ -1,0 +1,11 @@
+.card__like {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+
+.card__like-counter {
+  font-size: 13px;
+}

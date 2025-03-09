@@ -7,6 +7,37 @@
   background-size: cover;
   background-position: center;
   margin: 0 29px 0 0;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.3s ease-in-out;
+}
+
+.profile__image:hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  border-radius: 50%;
+}
+
+.profile__image_edit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-size: cover;
+  width: 26px;
+  height: 26px;
+  opacity: 0;
+  background-image: url("<%=require('../../../../../images/edit.svg");
+  z-index: 1;
+}
+
+.profile__image:hover .profile__image_edit {
+  opacity: 1;
 }
 
 @media screen and (max-width: 740px) {
