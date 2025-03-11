@@ -20,6 +20,7 @@ import {
   profileEditing,
   addNewCard,
   newAvatar,
+  getUserInformation,
 } from "./components/api.js";
 
 const content = document.querySelector(".content");
@@ -43,7 +44,6 @@ const formDescr = document.querySelector(".popup__input_type_description");
 const profileTitle = document.querySelector(".profile__title");
 const profileDescr = document.querySelector(".profile__description");
 const profileImage = document.querySelector(".profile__image");
-const profileImageEdit = document.querySelector(".profile__image_edit");
 const popupAvatar = document.querySelector(".popup_type_avatar");
 const avatarInput = popupAvatar.querySelector(".popup__input_type_avatar");
 const avatarForm = popupAvatar.querySelector(".popup__form");
@@ -63,10 +63,23 @@ avatarForm.addEventListener("submit", (event) => {
   submitButton.disabled = true;
 
   const newAvatarUrl = avatarInput.value;
+  localStorage.setItem("profileAvatar", newAvatarUrl);
+  profileImage.src = newAvatarUrl;
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const storedAvatar = localStorage.getItem("profileAvatar");
+    if (storedAvatar) {
+      profileImage.src = storedAvatar;
+      profileImage.onload = function () {
+        console.log("Аватар загружен");
+      };
+    }
+  });
 
   newAvatar(newAvatarUrl)
     .then((data) => {
       profileImage.style.backgroundImage = `url(${newAvatarUrl})`;
+      localStorage.setItem("profileAvatar", newAvatarUrl);
       closePopup(popupAvatar);
       submitButton.textContent = "Сохранить";
       submitButton.disabled = false;
@@ -98,16 +111,22 @@ editPopupForm.addEventListener("submit", (event) => {
   submitButton.textContent = "Сохранение...";
   submitButton.disabled = true;
 
-  profileEditing()
+  const updatedProfileData = {
+    name: formName.value,
+    about: formDescr.value,
+  };
+
+  profileEditing(updatedProfileData)
     .then((data) => {
-      profileTitle.textContent = formName.value;
-      profileDescr.textContent = formDescr.value;
+      profileTitle.textContent = data.name;
+      profileDescr.textContent = data.about;
+      localStorage.setItem("profileData", JSON.stringify(data));
       closePopup(popupTypeEdit);
-      submitButton.textContent = "Сохранить";
-      submitButton.disabled = false;
     })
     .catch((error) => {
       console.error(error);
+    })
+    .finally(() => {
       submitButton.textContent = "Сохранить";
       submitButton.disabled = false;
     });
@@ -146,57 +165,60 @@ newCardPopupForm.addEventListener("submit", (event) => {
   const newCardName = newCardNameInput.value;
   const newCardLink = newCardNamelink.value;
 
-  const newCard = {
-    name: newCardName,
-    link: newCardLink,
-    alt: newCardName,
-  };
+  getUserInformation().then((userData) => {
+    const newCard = {
+      name: newCardName,
+      link: newCardLink,
+      alt: newCardName,
+      owner: userData._id,
+    };
 
-  addNewCard(newCard)
-    .then((data) => {
-      const newElement = createCard(
-        data,
-        deleteCard,
-        openImage,
-        likeCard,
-        document.querySelector("#card-template").content
-      );
-      addCard(newElement, placesList);
-      closePopup(popupTypeNewCard);
-      newCardPopupForm.reset();
-      submitButton.textContent = "Сохранить";
-      submitButton.disabled = false;
-
-      const deleteButton = newElement.querySelector(".card__delete-button");
-      if (deleteButton) {
-        deleteButton.addEventListener("click", (event) => {
-          const cardElement = event.target.closest(".places__item");
-          openPopup(popupDelete);
-          const buttonDelete = popupDelete.querySelector(
-            ".popup__button_delete"
+    addNewCard(newCard)
+      .then((data) => {
+        getUserInformation().then((userData) => {
+          const newElement = createCard(
+            data,
+            deleteCard,
+            openImage,
+            likeCard,
+            document.querySelector("#card-template").content,
+            true
           );
-          buttonDelete.addEventListener("click", () => {
-            if (cardElement) {
-              deleteCard(cardElement, popupDelete);
-            }
-            closePopup(popupDelete);
-          });
+
+          addCard(newElement, placesList);
+
+          const deleteButton = newElement.querySelector(".card__delete-button");
+          if (deleteButton) {
+            deleteButton.addEventListener("click", (event) => {
+              const cardElement = event.target.closest(".places__item");
+              const popupDelete = document.querySelector(".popup_type_delete");
+              popupDelete.classList.add("popup_is-opened");
+              const buttonDelete = popupDelete.querySelector(
+                ".popup__button_delete"
+              );
+              buttonDelete.addEventListener("click", () => {
+                if (cardElement) {
+                  deleteCard(
+                    cardElement,
+                    popupDelete,
+                    document.querySelector(".places__list")
+                  );
+                }
+                popupDelete.classList.remove("popup_is-opened");
+              });
+            });
+          }
         });
-      }
-    })
-    .catch((error) => {
-      console.error(error);
-      submitButton.textContent = "Сохранить";
-      submitButton.disabled = false;
-    });
-
-  closePopup(popupTypeNewCard);
-  newCardPopupForm.reset();
-
-  clearValidation(newCardPopupForm, {
-    inputErrorClass: "popup__input_type_error",
-    submitButtonSelector: ".popup__button",
-    inactiveButtonClass: "popup__button_disabled",
+        closePopup(popupTypeNewCard);
+        newCardPopupForm.reset();
+        submitButton.textContent = "Сохранить";
+        submitButton.disabled = false;
+      })
+      .catch((error) => {
+        console.error(error);
+        submitButton.textContent = "Сохранить";
+        submitButton.disabled = false;
+      });
   });
 });
 
@@ -236,35 +258,73 @@ const closeEventLists = function () {
 
 closeEventLists();
 
-getCardsFromTheServer().then(([userData, cardsData]) => {
-  profileTitle.textContent = userData.name;
-  profileDescr.textContent = userData.about;
-  profileImage.src = userData.avatar;
+const storedProfileData = localStorage.getItem("profileData");
+const storedAvatar = localStorage.getItem("profileAvatar");
 
-  cardsData.forEach((item) => {
-    const owner = item.owner._id === userData._id;
-    const card = createCard(
-      item,
-      deleteCard,
-      openImage,
-      likeCard,
-      document.querySelector("#card-template").content,
-      owner
-    );
-    addCard(card, placesList);
-    const deleteButton = card.querySelector(".card__delete-button");
-    if (deleteButton) {
-      deleteButton.addEventListener("click", (event) => {
-        const cardElement = event.target.closest(".places__item");
-        openPopup(popupDelete);
-        const buttonDelete = popupDelete.querySelector(".popup__button_delete");
-        buttonDelete.addEventListener("click", () => {
-          if (cardElement) {
-            deleteCard(cardElement);
+function updateAvatar() {
+  const storedAvatar = localStorage.getItem("profileAvatar");
+  if (storedAvatar) {
+    profileImage.src = storedAvatar;
+  }
+}
+
+if (storedAvatar) {
+  profileImage.src = storedAvatar;
+}
+
+if (storedProfileData && storedAvatar) {
+  const profileData = JSON.parse(storedProfileData);
+  profileTitle.textContent = profileData.name;
+  profileDescr.textContent = profileData.about;
+  profileImage.src = storedAvatar;
+}
+
+getUserInformation().then((userData) => {
+  const avatarUrl = userData.avatar;
+  profileImage.src = avatarUrl;
+
+  newAvatar(avatarUrl)
+    .then((data) => {
+      profileImage.style.backgroundImage = `url(${avatarUrl})`;
+      localStorage.setItem("profileAvatar", avatarUrl);
+      getCardsFromTheServer().then(([userData, cardsData]) => {
+        const cardTemplate = document.querySelector("#card-template").content;
+        cardsData.forEach((item) => {
+          const owner = item.owner._id === userData._id;
+          const newElement = createCard(
+            item,
+            deleteCard,
+            openImage,
+            likeCard,
+            cardTemplate,
+            owner
+          );
+          addCard(newElement, placesList);
+
+          const deleteButton = newElement.querySelector(".card__delete-button");
+          if (deleteButton) {
+            deleteButton.addEventListener("click", (event) => {
+              const cardElement = event.target.closest(".places__item");
+              openPopup(popupDelete);
+              const buttonDelete = popupDelete.querySelector(
+                ".popup__button_delete"
+              );
+              buttonDelete.addEventListener("click", () => {
+                if (cardElement) {
+                  deleteCard(
+                    cardElement,
+                    popupDelete,
+                    document.querySelector(".places__list")
+                  );
+                }
+                closePopup(popupDelete);
+              });
+            });
           }
-          closePopup(popupDelete);
         });
       });
-    }
-  });
+    })
+    .catch((error) => {
+      console.error(error);
+    });
 });
