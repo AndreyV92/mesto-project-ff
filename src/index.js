@@ -21,6 +21,7 @@ import {
   addNewCard,
   newAvatar,
   getUserInformation,
+  deleteCardById,
 } from "./components/api.js";
 
 const content = document.querySelector(".content");
@@ -48,65 +49,72 @@ const popupAvatar = document.querySelector(".popup_type_avatar");
 const avatarInput = popupAvatar.querySelector(".popup__input_type_avatar");
 const avatarForm = popupAvatar.querySelector(".popup__form");
 const popupDelete = document.querySelector(".popup_type_delete");
+const popupCloseButtons = document.querySelectorAll(".popup__close");
+const popups = document.querySelectorAll('.popup')
 
-profileImage.addEventListener("click", () => {
-  openPopup(popupAvatar);
-});
 
-validateAvatarInput(avatarForm, avatarInput, "popup__input_type_error");
+const config = {
+  formSelector: ".popup__form",
+  inputSelector: ".popup__input",
+  submitButtonSelector: ".popup__button",
+  inactiveButtonClass: "popup__button_disabled",
+  inputErrorClass: "popup__input_type_error",
+};
 
-avatarForm.addEventListener("submit", (event) => {
-  event.preventDefault();
+enableValidation(config);
 
-  const submitButton = avatarForm.querySelector(".popup__button");
-  submitButton.textContent = "Сохранение...";
-  submitButton.disabled = true;
-
-  const newAvatarUrl = avatarInput.value;
-  localStorage.setItem("profileAvatar", newAvatarUrl);
-  profileImage.src = newAvatarUrl;
-
-  document.addEventListener("DOMContentLoaded", function () {
-    const storedAvatar = localStorage.getItem("profileAvatar");
-    if (storedAvatar) {
-      profileImage.src = storedAvatar;
-      profileImage.onload = function () {
-        console.log("Аватар загружен");
-      };
+getUserInformation()
+  .then((userData) => {
+    profileTitle.textContent = userData.name;
+    profileDescr.textContent = userData.about;
+    if (userData.avatar) {
+      profileImage.style.backgroundImage = `url(${userData.avatar})`;
     }
-  });
 
-  newAvatar(newAvatarUrl)
-    .then((data) => {
-      profileImage.style.backgroundImage = `url(${newAvatarUrl})`;
-      localStorage.setItem("profileAvatar", newAvatarUrl);
-      closePopup(popupAvatar);
-      submitButton.textContent = "Сохранить";
-      submitButton.disabled = false;
-    })
-    .catch((error) => {
-      console.error(error);
-      submitButton.textContent = "Сохранить";
-      submitButton.disabled = false;
+    return getCardsFromTheServer();
+  })
+  .then(([userData, cardsData]) => {
+    const cardTemplate = document.querySelector("#card-template").content;
+
+    cardsData.forEach((item) => {
+      const owner = item.owner._id === userData._id;
+      const isLiked = item.likes.some((like) => like._id === userData._id);
+
+      const newElement = createCard(
+        item,
+        deleteCard,
+        openImage,
+        likeCard,
+        cardTemplate,
+        owner
+      );
+
+      // Устанавливаем состояние лайка
+      const likeButton = newElement.querySelector(".card__like-button");
+      const likeCounter = newElement.querySelector(".card__like-counter");
+
+      if (isLiked) {
+        likeButton.classList.add("card__like-button_is-active");
+      }
+
+      likeCounter.textContent = item.likes.length;
+
+      addCard(newElement, placesList);
     });
-});
+  })
+  .catch((error) => {
+    console.error(error);
+  });
 
 profileEditButton.addEventListener("click", () => {
   formName.value = profileTitle.textContent;
   formDescr.value = profileDescr.textContent;
-
-  clearValidation(editPopupForm, {
-    inputErrorClass: "popup__input_type_error",
-    submitButtonSelector: ".popup__button",
-    inactiveButtonClass: "popup__button_disabled",
-  });
-
+  clearValidation(editPopupForm, config);
   openPopup(popupTypeEdit);
 });
 
 editPopupForm.addEventListener("submit", (event) => {
   event.preventDefault();
-
   const submitButton = editPopupForm.querySelector(".popup__button");
   submitButton.textContent = "Сохранение...";
   submitButton.disabled = true;
@@ -120,7 +128,6 @@ editPopupForm.addEventListener("submit", (event) => {
     .then((data) => {
       profileTitle.textContent = data.name;
       profileDescr.textContent = data.about;
-      localStorage.setItem("profileData", JSON.stringify(data));
       closePopup(popupTypeEdit);
     })
     .catch((error) => {
@@ -132,32 +139,40 @@ editPopupForm.addEventListener("submit", (event) => {
     });
 });
 
-profileAddButton.addEventListener("click", () => {
-  openPopup(popupTypeNewCard);
+profileImage.addEventListener("click", () => {
+  clearValidation(avatarForm, config);
+  openPopup(popupAvatar);
 });
 
-const config = {
-  formSelector: ".popup__form",
-  inputSelector: ".popup__input",
-  submitButtonSelector: ".popup__button",
-  inactiveButtonClass: "popup__button_disabled",
-  inputErrorClass: "popup__input_type_error",
-};
+avatarForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const submitButton = avatarForm.querySelector(".popup__button");
+  submitButton.textContent = "Сохранение...";
+  submitButton.disabled = true;
 
-enableValidation(config);
+  const newAvatarUrl = avatarInput.value;
 
-enableValidation({
-  formSelector: ".popup__form",
-  inputSelector: ".popup__input",
-  submitButtonSelector: ".popup__button",
-  inactiveButtonClass: "popup__button_disabled",
-  inputErrorClass: "popup__input_type_error",
-  errorClass: "popup__error_visible",
+  newAvatar(newAvatarUrl)
+    .then((data) => {
+      profileImage.style.backgroundImage = `url(${data.avatar})`; // Обновляем аватар из ответа сервера
+      closePopup(popupAvatar);
+    })
+    .catch((error) => {
+      console.error(error);
+    })
+    .finally(() => {
+      submitButton.textContent = "Сохранить";
+      submitButton.disabled = false;
+    });
+});
+
+profileAddButton.addEventListener("click", () => {
+  clearValidation(newCardPopupForm, config);
+  openPopup(popupTypeNewCard);
 });
 
 newCardPopupForm.addEventListener("submit", (event) => {
   event.preventDefault();
-
   const submitButton = newCardPopupForm.querySelector(".popup__button");
   submitButton.textContent = "Сохранение...";
   submitButton.disabled = true;
@@ -175,156 +190,43 @@ newCardPopupForm.addEventListener("submit", (event) => {
 
     addNewCard(newCard)
       .then((data) => {
-        getUserInformation().then((userData) => {
-          const newElement = createCard(
-            data,
-            deleteCard,
-            openImage,
-            likeCard,
-            document.querySelector("#card-template").content,
-            true
-          );
-
-          addCard(newElement, placesList);
-
-          const deleteButton = newElement.querySelector(".card__delete-button");
-          if (deleteButton) {
-            deleteButton.addEventListener("click", (event) => {
-              const cardElement = event.target.closest(".places__item");
-              const popupDelete = document.querySelector(".popup_type_delete");
-              popupDelete.classList.add("popup_is-opened");
-              const buttonDelete = popupDelete.querySelector(
-                ".popup__button_delete"
-              );
-              buttonDelete.addEventListener("click", () => {
-                if (cardElement) {
-                  deleteCard(
-                    cardElement,
-                    popupDelete,
-                    document.querySelector(".places__list")
-                  );
-                }
-                popupDelete.classList.remove("popup_is-opened");
-              });
-            });
-          }
-        });
+        const cardTemplate = document.querySelector("#card-template").content;
+        const newElement = createCard(
+          data,
+          deleteCard,
+          openImage,
+          likeCard,
+          cardTemplate,
+          true
+        );
+        addCard(newElement, placesList);
         closePopup(popupTypeNewCard);
         newCardPopupForm.reset();
-        submitButton.textContent = "Сохранить";
-        submitButton.disabled = false;
       })
       .catch((error) => {
         console.error(error);
-        submitButton.textContent = "Сохранить";
+      })
+      .finally(() => {
+        submitButton.textContent = "Создать";
         submitButton.disabled = false;
       });
   });
 });
 
-window.addEventListener("click", overlayClick);
+popupCloseButtons.forEach((itemClose) => {
+  itemClose.addEventListener("click", () => {
+    const popup = itemClose.closest(".popup");
+    closePopup(popup);
+  });
+});
 
 function openImage(item) {
   const popupImage = document.querySelector(".popup_type_image");
   popupImage.querySelector(".popup__image").src = item.link;
-  popupImage.querySelector(".popup__image").name = item.name;
   popupImage.querySelector(".popup__caption").textContent = item.name;
   openPopup(popupImage);
 }
 
-const closeEventLists = function () {
-  const popupClose = document.querySelectorAll(".popup__close");
-  popupClose.forEach((itemClose) => {
-    itemClose.addEventListener("click", () => {
-      const popup = itemClose.closest(".popup");
-      closePopup(popup);
-
-      if (popup === popupTypeEdit) {
-        clearValidation(editPopupForm, {
-          inputErrorClass: "popup__input_type_error",
-          submitButtonSelector: ".popup__button",
-          inactiveButtonClass: "popup__button_disabled",
-        });
-      } else if (popup === popupTypeNewCard) {
-        clearValidation(newCardPopupForm, {
-          inputErrorClass: "popup__input_type_error",
-          submitButtonSelector: ".popup__button",
-          inactiveButtonClass: "popup__button_disabled",
-        });
-      }
-    });
-  });
-};
-
-closeEventLists();
-
-const storedProfileData = localStorage.getItem("profileData");
-const storedAvatar = localStorage.getItem("profileAvatar");
-
-function updateAvatar() {
-  const storedAvatar = localStorage.getItem("profileAvatar");
-  if (storedAvatar) {
-    profileImage.src = storedAvatar;
-  }
-}
-
-if (storedAvatar) {
-  profileImage.src = storedAvatar;
-}
-
-if (storedProfileData && storedAvatar) {
-  const profileData = JSON.parse(storedProfileData);
-  profileTitle.textContent = profileData.name;
-  profileDescr.textContent = profileData.about;
-  profileImage.src = storedAvatar;
-}
-
-getUserInformation().then((userData) => {
-  const avatarUrl = userData.avatar;
-  profileImage.src = avatarUrl;
-
-  newAvatar(avatarUrl)
-    .then((data) => {
-      profileImage.style.backgroundImage = `url(${avatarUrl})`;
-      localStorage.setItem("profileAvatar", avatarUrl);
-      getCardsFromTheServer().then(([userData, cardsData]) => {
-        const cardTemplate = document.querySelector("#card-template").content;
-        cardsData.forEach((item) => {
-          const owner = item.owner._id === userData._id;
-          const newElement = createCard(
-            item,
-            deleteCard,
-            openImage,
-            likeCard,
-            cardTemplate,
-            owner
-          );
-          addCard(newElement, placesList);
-
-          const deleteButton = newElement.querySelector(".card__delete-button");
-          if (deleteButton) {
-            deleteButton.addEventListener("click", (event) => {
-              const cardElement = event.target.closest(".places__item");
-              openPopup(popupDelete);
-              const buttonDelete = popupDelete.querySelector(
-                ".popup__button_delete"
-              );
-              buttonDelete.addEventListener("click", () => {
-                if (cardElement) {
-                  deleteCard(
-                    cardElement,
-                    popupDelete,
-                    document.querySelector(".places__list")
-                  );
-                }
-                closePopup(popupDelete);
-              });
-            });
-          }
-        });
-      });
-    })
-    .catch((error) => {
-      console.error(error);
-    });
+popups.forEach((popup) => {
+  popup.addEventListener('click', overlayClick);
 });

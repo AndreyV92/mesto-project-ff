@@ -12,7 +12,6 @@ export function openPopup(popup) {
 export function closePopup(popup) {
   popup.classList.remove('popup_is-opened')
   document.removeEventListener('keyup', handleEscKeyUp);
-  clearValidationErrors(popup)
 }
 
 function handleEscKeyUp(evt) {
