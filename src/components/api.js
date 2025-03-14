@@ -22,7 +22,7 @@ export function getCards() {
   }).then(checkResponse);
 }
 
-export function getCardsFromTheServer() {
+export function getAppData() {
   return Promise.all([getUserInformation(), getCards()]);
 }
 
@@ -74,3 +74,4 @@ export function newAvatar(avatarUrl) {
     body: JSON.stringify({ avatar: avatarUrl }),
   }).then(checkResponse);
 }
+

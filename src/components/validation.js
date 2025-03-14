@@ -4,7 +4,7 @@ export function showInputError(formElement, element, errorMessage, config) {
   if (formError) {
     element.classList.add(config.inputErrorClass);
     formError.textContent = errorMessage;
-    formError.classList.add("popup__error_visible");
+    formError.classList.add(config.errorClass);
   }
 }
 
@@ -12,7 +12,7 @@ export function hideInputError(formElement, element, config) {
   const formError = formElement.querySelector(`.${element.id}-error`);
   if (formError) {
     element.classList.remove(config.inputErrorClass);
-    formError.classList.remove("popup__error_visible");
+    formError.classList.remove(config.errorClass);
     formError.textContent = "";
   }
 }
@@ -82,12 +82,5 @@ export function setEventListeners(formElement, config) {
       isValid(formElement, inputElement, config);
       toggleButtonState(inputList, buttonElement, config);
     });
-  });
-}
-
-export function validateAvatarInput(formElement, inputElement, config) {
-  inputElement.addEventListener("input", () => {
-    isValid(formElement, inputElement, config);
-    toggleButtonState([inputElement], formElement.querySelector(config.submitButtonSelector), config);
   });
 }

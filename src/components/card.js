@@ -1,20 +1,13 @@
-import { openPopup, closePopup } from "./modal";
 import {
   addLike,
   deleteLike,
-  getCardsFromTheServer,
   deleteCardById,
 } from "./api";
 
-export function createCard(
-  item,
-  deleteCard,
-  openImage,
-  likeCard,
-  cardTemplate,
-  owner
-) {
-  const cardTemplateCopy = cardTemplate.querySelector(".places__item").cloneNode(true);
+export function createCard(item, openImage, likeCard, cardTemplate, userData) {
+  const cardTemplateCopy = cardTemplate
+    .querySelector(".places__item")
+    .cloneNode(true);
 
   const cardImage = cardTemplateCopy.querySelector(".card__image");
   const cardTitle = cardTemplateCopy.querySelector(".card__title");
@@ -23,12 +16,20 @@ export function createCard(
   const likeButton = cardTemplateCopy.querySelector(".card__like-button");
 
   cardImage.src = item.link;
+  cardImage.alt = item.name
   cardTitle.textContent = item.name;
-  likeCounter.textContent = item.likes ? item.likes.length : "";
+
+  const likes = item.likes || [];
+  likeCounter.textContent = likes.length;
 
   cardTemplateCopy.setAttribute("data-id", item._id);
 
-  if (owner && deleteButton) {
+  const isLiked = item.likes.some((like) => like._id === userData._id);
+  if (isLiked) {
+    likeButton.classList.add("card__like-button_is-active");
+  }
+
+  if (item.owner._id === userData._id && deleteButton) {
     deleteButton.style.display = "block";
 
     deleteButton.addEventListener("click", () => {
@@ -49,32 +50,19 @@ export function createCard(
   });
 
   likeButton.addEventListener("click", () => {
-    likeCard(likeButton);
+    likeCard(likeButton, cardTemplateCopy);
   });
 
   return cardTemplateCopy;
 }
 
-export function deleteCard(cardElement, popupDelete) {
-  const cardId = cardElement.getAttribute("data-id");
-
-  deleteCardById(cardId)
-    .then(() => {
-      cardElement.remove();
-      closePopup(popupDelete);
-    })
-    .catch((error) => {
-      console.error(error);
-    });
-}
-
 export function addCard(cardTemplateCopy, placesList) {
   placesList.prepend(cardTemplateCopy);
+
   return cardTemplateCopy;
 }
 
-export function likeCard(likeButton) {
-  const cardElement = likeButton.closest(".places__item");
+export function likeCard(likeButton, cardElement) {
   const cardId = cardElement.getAttribute("data-id");
   const likeCounter = cardElement.querySelector(".card__like-counter");
 
@@ -82,7 +70,7 @@ export function likeCard(likeButton) {
     deleteLike(cardId)
       .then((data) => {
         likeButton.classList.remove("card__like-button_is-active");
-        likeCounter.textContent = data.likes.length;
+        likeCounter.textContent = data.likes.length; 
       })
       .catch((error) => {
         console.error(error);
@@ -91,7 +79,7 @@ export function likeCard(likeButton) {
     addLike(cardId)
       .then((data) => {
         likeButton.classList.add("card__like-button_is-active");
-        likeCounter.textContent = data.likes.length;
+        likeCounter.textContent = data.likes.length; 
       })
       .catch((error) => {
         console.error(error);
