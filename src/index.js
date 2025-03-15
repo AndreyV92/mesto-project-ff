@@ -23,6 +23,7 @@ import {
 
 const content = document.querySelector(".content");
 const placesList = content.querySelector(".places__list");
+const cardTemplate = document.querySelector("#card-template").content;
 const profileEditButton = document.querySelector(".profile__edit-button");
 const popupTypeEdit = document.querySelector(".popup_type_edit");
 const profileAddButton = document.querySelector(".profile__add-button");
@@ -38,11 +39,15 @@ const popupAvatar = document.querySelector(".popup_type_avatar");
 const avatarInput = popupAvatar.querySelector(".popup__input_type_avatar");
 const avatarForm = popupAvatar.querySelector(".popup__form");
 const popupCloseButtons = document.querySelectorAll(".popup__close");
-const popups = document.querySelectorAll('.popup')
+const popups = document.querySelectorAll('.popup');
 const popupImage = document.querySelector(".popup_type_image");
+const popupImageElement = popupImage.querySelector(".popup__image");
+const popupCaption = popupImage.querySelector(".popup__caption");
 const profileFormSubmitButton = editPopupForm.querySelector(".popup__button");  
 const newCardFormSubmitButton = newCardPopupForm.querySelector(".popup__button");
 const avatarFormSubmitButton = avatarForm.querySelector(".popup__button");
+const nameInput = newCardPopupForm.querySelector(".popup__input_type_card-name");
+const linkInput = newCardPopupForm.querySelector(".popup__input_type_url");
 
 const config = {
   formSelector: ".popup__form",
@@ -57,8 +62,6 @@ enableValidation(config);
 
 getAppData()
   .then(([userData, cardsData]) => {
-    const cardTemplate = document.querySelector("#card-template").content;
-
     profileTitle.textContent = userData.name;
     profileDescr.textContent = userData.about;
     if (userData.avatar) {
@@ -148,8 +151,8 @@ newCardPopupForm.addEventListener("submit", (event) => {
   newCardFormSubmitButton.textContent = "Сохранение...";
   newCardFormSubmitButton.disabled = true;
 
-  const newCardName = newCardPopupForm.querySelector(".popup__input_type_card-name").value;
-  const newCardLink = newCardPopupForm.querySelector(".popup__input_type_url").value;
+  const newCardName = nameInput.value;
+  const newCardLink = linkInput.value;
 
   getUserInformation().then((userData) => {
     const newCard = {
@@ -161,7 +164,6 @@ newCardPopupForm.addEventListener("submit", (event) => {
 
     addNewCard(newCard)
       .then((data) => {
-        const cardTemplate = document.querySelector("#card-template").content;
         const newElement = createCard(
           data,
           openImage,
@@ -187,19 +189,13 @@ popupCloseButtons.forEach((itemClose) => {
   itemClose.addEventListener("click", () => {
     const popup = itemClose.closest(".popup");
     closePopup(popup);
-
-    if (popup === popupTypeEdit) {
-      clearValidation(editPopupForm, config);
-    } else if (popup === popupTypeNewCard) {
-      clearValidation(newCardPopupForm, config);
-    }
   });
 });
 
 function openImage(item) {
-  popupImage.querySelector(".popup__image").src = item.link;
-  popupImage.querySelector(".popup__image").alt = item.name;
-  popupImage.querySelector(".popup__caption").textContent = item.name;
+  popupImageElement.src = item.link;
+  popupImageElement.alt = item.name;
+  popupCaption.textContent = item.name;
   openPopup(popupImage);
 }
 
